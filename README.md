@@ -82,6 +82,15 @@ The Smart Heater Module is an industrial-grade thermal controller leveraging DMA
   - Selection confirmation (ENTER_BTN)
   - Up/Down controls
 
+### Status Indicators
+- **LED Status Display**
+  - **Power LED (PC13):** System power and heartbeat indicator
+  - **Fault LED (PA0):** Red LED for error/fault conditions
+  - **Communication LED (PA8):** Blinks during RS485 activity
+  - **VC Relay Status:** Indicated by relay state (PB0)
+  - **Gas/Furnace Status:** Indicated by relay state (PB1)
+  - **Fan Status:** Indicated by relay state (PB2)
+
 ## 🔧 Hardware Components
 
 | Component | Part Number | Purpose | Interface |
@@ -92,6 +101,15 @@ The Smart Heater Module is an industrial-grade thermal controller leveraging DMA
 | RS485 Transceiver | Generic | Modbus Communication | USART2 (DMA) |
 | LCD Display | HD44780 Compatible | User Interface | GPIO (4-bit mode) |
 | Crystal Oscillator | 8MHz | System Clock | HSE |
+| Status LEDs | Standard LEDs | Visual Status Indicators | GPIO |
+
+### Circuit Diagram
+
+For complete circuit schematic and connections, see:
+- **Circuit Diagram:** [heater_module.svg](simulation/heater_module.svg)
+- **Proteus Project:** [heater_module.pdsprj](simulation/heater_module.pdsprj)
+
+![Circuit Overview](simulation/heater_module.svg)
 
 ## 📌 Pin Configuration
 
@@ -137,6 +155,15 @@ The Smart Heater Module is an industrial-grade thermal controller leveraging DMA
 | PA10 | ENTER_BTN | Enter Button (EXTI) |
 | PB10 | UP_BTN | Increment Button |
 | PB11 | DOWN_BTN | Decrement Button |
+
+### Status LEDs
+| Pin | Function | Description |
+|-----|----------|-------------|
+| PC13 | LED_POWER | Power/Heartbeat LED (Active Low) |
+| PA0 | LED_FAULT | Fault/Error Indicator (Red) |
+| PA8 | LED_COM | Communication Activity Indicator |
+
+**Note:** Gas valve and fan status can be indicated by LEDs connected in parallel with relay outputs (PB1 and PB2).
 
 ### Debug
 | Pin | Function | Description |

@@ -45,20 +45,31 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, RS485_DE_Pin|MAX31865_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, LED_FAULT_Pin|RS485_DE_Pin|MAX31865_CS_Pin|LED_COM_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, FURNACE_RELAY_Pin|FAN_RELAY_Pin|MAX31855_CS_Pin|LCD_D7_Pin
                           |LCD_RS_Pin|LCD_E_Pin|LCD_D4_Pin|LCD_D5_Pin
                           |LCD_D6_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : RS485_DE_Pin MAX31865_CS_Pin */
-  GPIO_InitStruct.Pin = RS485_DE_Pin|MAX31865_CS_Pin;
+  /*Configure GPIO pin : LED_POWER_Pin */
+  GPIO_InitStruct.Pin = LED_POWER_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LED_POWER_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LED_FAULT_Pin RS485_DE_Pin MAX31865_CS_Pin LED_COM_Pin */
+  GPIO_InitStruct.Pin = LED_FAULT_Pin|RS485_DE_Pin|MAX31865_CS_Pin|LED_COM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
