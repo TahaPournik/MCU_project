@@ -1,0 +1,43 @@
+# Build Directories
+/build/
+/build_test/
+/Debug/
+/Release/
+/bin/
+
+# Toolchain/IDE specific
+.vscode/
+.idea/
+.settings/
+.project
+.cproject
+.mxproject
+*.launch
+.classpath
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+
+# Temp/Backup files
+*.bak
+*.tmp
+*~
+*.swp
+.DS_Store
+Thumbs.db
+
+# Clangd
+.clangd/
+.cache/
+*.clangd
+
+# System generated
+*.ioc.bak
+mx.scratch
+
+# simulation
+simulation/
