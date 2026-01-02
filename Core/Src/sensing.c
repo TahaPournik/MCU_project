@@ -1,188 +1,149 @@
+/**
+ ******************************************************************************
+ * @file           : sensing.c
+ * @brief          : Source file for sensor data acquisition (MAX31865 & MAX31855)
+ ******************************************************************************
+ */
+
+/* Includes ------------------------------------------------------------------*/
 #include "sensing.h"
-#include "main.h"
 #include "spi.h"
-#include "stm32f103xb.h"
-#include "stm32f1xx.h"
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_adc.h"
-#include "stm32f1xx_hal_gpio.h"
-#include "stm32f1xx_hal_spi.h"
-#include "lcd.h"
-#include <stdint.h>
-#include <math.h>
+#include "gpio.h"
+#include <string.h>
 
-/* Volatile variables for DMA and readings */
-volatile uint8_t ambient_raw_val[8];
-volatile uint8_t furnace_raw_val[5];
-volatile float current_ambient_temp = 0.0f;
-volatile int32_t current_furnace_temp = 0;
-volatile uint8_t furnace_error = 0;
-volatile uint8_t ambient_error = 0;
-volatile uint8_t status = 0;
-volatile float thermo_calib = 1.0f;
-volatile float pt100_calib = -0.137f;
-volatile uint32_t last_sensor_tick = 0; // Watchdog for sensor chain
-#define SENSOR_TIMEOUT_MS 500  // If no update in 500ms, restart chain
-// status bits
-#define STATUS_SPI_ERROR (1 << 0)
-#define STATUS_SPI_BUSY (1 << 1) 
-#define STATUS_SPI_TIMEOUT (1 << 2)
-#define STATUS_AMBIENT_ERROR (1 << 3)
-#define STATUS_FURNACE_ERROR (1 << 4)
-#define STATUS_AMBIENT_READING (1 << 5)
-#define STATUS_FURNACE_READING (1 << 6)
+/* Private typedef -----------------------------------------------------------*/
 
+/* Private define ------------------------------------------------------------*/
+#define MAX31865_DATA_SIZE 9
+#define MAX31855_DATA_SIZE 4  // MAX31855 is usually 32-bit (4 bytes)
+
+/* Private macro -------------------------------------------------------------*/
+
+/* Private variables ---------------------------------------------------------*/
+static Sensing_Data_t sensor_data = {0};
+
+// DMA Buffers for MAX31865
+static uint8_t rx_buf_31865[MAX31865_DATA_SIZE];
+static uint8_t tx_buf_31865[MAX31865_DATA_SIZE] = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static uint8_t config_data_31865[8] = {0x80, 0xC1, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00};
+
+// DMA Buffer for MAX31855
+static uint8_t rx_buf_31855[MAX31855_DATA_SIZE + 1]; // Extra byte for safety
+
+/* Private function prototypes -----------------------------------------------*/
+static void config_max31865(void);
+
+/* Public Functions ----------------------------------------------------------*/
+
+/**
+ * @brief Initializes the sensing module and configures the sensors.
+ */
+void sensing_init(void) {
+  //initialize SPI  
+  MX_SPI1_Init();
+  MX_SPI2_Init();
+  //configure max31865
+  config_max31865();
+}
 
 
 /**
-  * @brief Initializes the sensing peripheral
-  */
-
-
-
-void Sensing_Init(void) {
-
-  HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_RESET);
-  uint8_t init_data[2] = {0x80, 0b11000010,};
-  HAL_SPI_Transmit(&hspi1, init_data, 2, 100);
-
-}
-
-// void furnace_dma_read(){
-//   HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
-//   HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_RESET);
-//   HAL_SPI_Receive_DMA(&hspi1, (uint8_t*)furnace_raw_val, 4);
-// }
-
-void furnace_read(){
-  // check if spi is busy
-  if (status & STATUS_SPI_BUSY) return;
-  
-  status |= (STATUS_SPI_BUSY | STATUS_FURNACE_READING);
-    
-  // reset max31855 cs pin (PB12)
-  HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_RESET);
-    
-  // read furnace (4 bytes) using DMA on SPI2
-  if(HAL_SPI_Receive_DMA(&hspi2, (uint8_t*)furnace_raw_val, 4) != HAL_OK) {
-     // If DMA fails to start, reset status
-     status &= ~(STATUS_SPI_BUSY | STATUS_FURNACE_READING);
-     HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_SET);
-  }
-}
-
-void ambient_read(){
-    if (status & STATUS_SPI_BUSY) return;
-    status |= (STATUS_SPI_BUSY | STATUS_AMBIENT_READING);
-
-    // reset max31865 cs pin (PA4)
+ * @brief Starts a non-blocking DMA read for the MAX31865 sensor.
+ */
+void max31865_read(void) {
+    // Pull CS low to select the chip
     HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_RESET);
-
-    // read ambient (8 bytes)
-    // First byte is read address/command (0x00). 
-    uint8_t data = 0x00;
-    // We send command in blocking (fast enough) then read via DMA
-    HAL_SPI_Transmit(&hspi1, &data, 1, 100);
     
-    if(HAL_SPI_Receive_DMA(&hspi1, (uint8_t*)ambient_raw_val, 8) != HAL_OK) {
-       status &= ~(STATUS_SPI_BUSY | STATUS_AMBIENT_READING);
-       HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
+    // Start DMA transfer
+    HAL_SPI_TransmitReceive_DMA(&hspi1, tx_buf_31865, rx_buf_31865, MAX31865_DATA_SIZE);
+}
+
+/**
+ * @brief Starts a non-blocking DMA read for the MAX31855 sensor.
+ */
+void max31855_read(void) {
+    // Pull CS low to select the chip
+    HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_RESET);
+    
+    // Start DMA receive (MAX31855 is read-only)
+    HAL_SPI_Receive_DMA(&hspi2, rx_buf_31855, 4);
+}
+
+/**
+ * @brief Callback function triggered when an SPI DMA transfer is complete.
+ * @param hspi SPI handle
+ */
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (hspi->Instance == SPI1) {
+        // Deselect MAX31865
+        HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
+        process_max31865_data();
     }
 }
 
+/**
+ * @brief Callback function triggered when an SPI DMA receive is complete.
+ * @param hspi SPI handle
+ */
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
-  // Case 1: MAX31865 (Ambient) on SPI1
-  if (hspi->Instance == SPI1) {
-      // Release CS
-      HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
-      status &= ~(STATUS_SPI_BUSY | STATUS_AMBIENT_READING);
-
-      // --- Data Processing for MAX31865 ---
-      // ambient_raw_val[0] = Config, [1]=RTD MSB, [2]=RTD LSB
-      int16_t ambient_raw = ((ambient_raw_val[1] << 8) | ambient_raw_val[2]) >> 1;
-      
-      // Check Fault Bit (D0)
-      if (ambient_raw_val[2] & 0x01) {
-          status |= STATUS_AMBIENT_ERROR;
-          ambient_error = ambient_raw_val[7]; // Fault Status Register
-      } else {
-          status &= ~STATUS_AMBIENT_ERROR;
-          ambient_error = 0;
-          
-          // Simple Linear Conversion (Callendar-Van Dusen is better but costly)
-          // R_RTD = (ADC * R_REF) / 32768
-          // T = (R_RTD - R0) / (R0 * alpha)
-          // Simplified: T = (ADC * 0.0317) - 259.7 (for PT100, 430Gb Rref)
-          current_ambient_temp = ((ambient_raw * 0.0317f) - 259.7f + pt100_calib);
-      }
-
-      // Chain: Start Furnace Read
-      furnace_read();
-  }
-  
-  // Case 2: MAX31855 (Furnace) on SPI2
-  else if (hspi->Instance == SPI2) {
-      // Release CS
-      HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_SET);
-      status &= ~(STATUS_SPI_BUSY | STATUS_FURNACE_READING);
-
-      // --- Data Processing for MAX31855 ---
-      // 32-bit Frame: [31:18] Temp, [16] Fast, [15:4] Internal Temp
-      uint32_t furnace_raw = ((uint32_t)furnace_raw_val[0] << 24) | 
-                             ((uint32_t)furnace_raw_val[1] << 16) | 
-                             ((uint32_t)furnace_raw_val[2] << 8)  | 
-                             (uint32_t)furnace_raw_val[3];
-      
-      // Check for Errors (Bit 16 or Bits 2-0)
-      if (furnace_raw & 0x10007) { // D16=Fault, D2=SCV, D1=SCG, D0=OC
-          status |= STATUS_FURNACE_ERROR;
-          furnace_error = (furnace_raw & 0x07); 
-      } else {
-          status &= ~STATUS_FURNACE_ERROR;
-          furnace_error = 0;
-          
-          // Extract Thermocouple Temperature (14-bit signed, D31-D18)
-          int32_t termo_val = (int32_t)furnace_raw >> 18; 
-          
-          // Extract Internal Reference Temperature (12-bit signed, D15-D4)
-          int32_t intemp_val = (int32_t)((furnace_raw >> 4) & 0xFFF);
-          if (intemp_val & 0x800) intemp_val |= 0xFFFFF000; // Sign extend
-
-          // Calc T = Thermo * 0.25 - (Internal * alpha) + Offset
-          // Note: Specific formula depends on usage, simplified here
-          current_furnace_temp = (int32_t)roundf((termo_val * 0.25f) + thermo_calib);
-          // (We usually don't subtract internal temp for K-Type raw value, 
-          // MAX31855 outputs compensated temp in D31-D18)
-      }
-
-      // Chain: Start Ambient Read
-      ambient_read();
-  }
-  
-  // Update watchdog
-  last_sensor_tick = HAL_GetTick();
+    if (hspi->Instance == SPI2) {
+        // Deselect MAX31855
+        HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_SET);
+        process_max31855_data();
+    }
 }
 
+/**
+ * @brief Processes the raw data received from the MAX31865 sensor.
+ */
+void process_max31865_data(void) {
+    // Placeholder for temperature conversion logic
+    // sensor_data.temp_max31865 = ...
+}
+
+/**
+ * @brief Processes the raw data received from the MAX31855 sensor.
+ */
+void process_max31855_data(void) {
+    // Placeholder for temperature conversion logic
+    // sensor_data.temp_max31855 = ...
+}
+
+/**
+ * @brief Callback for SPI errors.
+ * @param hspi SPI handle
+ */
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
-  // Handle SPI1 Error (Ambient)
-  if (hspi->Instance == SPI1) {
-      HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
-      status &= ~(STATUS_SPI_BUSY | STATUS_AMBIENT_READING);
-      status |= STATUS_AMBIENT_ERROR;
-      
-      // Try to recover chain by skipping to next
-      furnace_read();
-  }
-  // Handle SPI2 Error (Furnace)
-  else if (hspi->Instance == SPI2) {
-      HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_SET);
-      status &= ~(STATUS_SPI_BUSY | STATUS_FURNACE_READING);
-      status |= STATUS_FURNACE_ERROR;
-      
-      // Try to recover chain by skipping to next
-      ambient_read();
-  }
-  
-  last_sensor_tick = HAL_GetTick();
+    if (hspi->Instance == SPI1) {
+        HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
+        max31865_ErrorCallback();
+    } else if (hspi->Instance == SPI2) {
+        HAL_GPIO_WritePin(MAX31855_CS_GPIO_Port, MAX31855_CS_Pin, GPIO_PIN_SET);
+        max31855_ErrorCallback();
+    }
+}
+
+/**
+ * @brief Error handler for MAX31865 communication issues.
+ */
+void max31865_ErrorCallback(void) {
+    // Handle MAX31865 error
+}
+
+/**
+ * @brief Error handler for MAX31855 communication issues.
+ */
+void max31855_ErrorCallback(void) {
+    // Handle MAX31855 error
+}
+
+/* Private Functions ---------------------------------------------------------*/
+
+/**
+ * @brief Configures the MAX31865 chip settings.
+ */
+static void config_max31865(void) {
+    HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi1, config_data_31865, 8, 100);
+    HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_SET);
 }

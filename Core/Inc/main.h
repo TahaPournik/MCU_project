@@ -78,7 +78,7 @@ void Error_Handler(void);
 #define VC_MONITOR_Pin GPIO_PIN_0
 #define VC_MONITOR_GPIO_Port GPIOB
 #define VC_MONITOR_EXTI_IRQn EXTI0_IRQn
-#define FURNACE_RELAY_Pin GPIO_PIN_1
+#define FURNACE_RELAY_Pin GPIO_PIN_3
 #define FURNACE_RELAY_GPIO_Port GPIOB
 #define FAN_RELAY_Pin GPIO_PIN_2
 #define FAN_RELAY_GPIO_Port GPIOB
