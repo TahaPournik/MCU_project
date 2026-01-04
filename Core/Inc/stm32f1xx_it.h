@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -55,16 +55,14 @@ void SVC_Handler(void);
 void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
-void WWDG_IRQHandler(void);
 void EXTI0_IRQHandler(void);
 void DMA1_Channel2_IRQHandler(void);
 void DMA1_Channel3_IRQHandler(void);
 void DMA1_Channel4_IRQHandler(void);
-void DMA1_Channel6_IRQHandler(void);
-void DMA1_Channel7_IRQHandler(void);
+void DMA1_Channel5_IRQHandler(void);
 void EXTI9_5_IRQHandler(void);
-void TIM2_IRQHandler(void);
-void USART2_IRQHandler(void);
+void SPI1_IRQHandler(void);
+void SPI2_IRQHandler(void);
 void EXTI15_10_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 

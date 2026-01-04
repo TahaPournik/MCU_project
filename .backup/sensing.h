@@ -27,18 +27,17 @@ typedef struct {
     int32_t temp_max31855;      /**< Temperature from MAX31855 (Thermocouple) */
 } Sensing_Data_t;
 
-#define MAX31865_DATA_SIZE 9
+#define MAX31865_DATA_SIZE 8
 #define MAX31855_DATA_SIZE 4
 
 /* Exported constants --------------------------------------------------------*/
-extern Sensing_Data_t sensor_data;
-extern float max31865_callibration;
-extern float max31855_callibration;
-extern  uint8_t config_data_31865[MAX31865_DATA_SIZE];
-extern  uint8_t rx_buf_31865[MAX31865_DATA_SIZE]; // Extra byte for safety
-extern  uint8_t tx_buf_31865[MAX31865_DATA_SIZE]; 
-extern uint8_t rx_buf_31855[MAX31855_DATA_SIZE];
-extern HAL_StatusTypeDef error55;
+extern volatile Sensing_Data_t sensor_data;
+extern volatile float max31865_callibration;
+extern volatile float max31855_callibration;
+extern  uint8_t config_data_31865[9];
+extern  uint8_t rx_buf_31865[MAX31865_DATA_SIZE + 1]; // Extra byte for safety
+extern  uint8_t tx_buf_31865[MAX31865_DATA_SIZE + 1]; 
+
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**

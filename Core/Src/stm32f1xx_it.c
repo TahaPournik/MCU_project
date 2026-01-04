@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,7 +22,6 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,15 +58,10 @@
 extern DMA_HandleTypeDef hdma_spi1_rx;
 extern DMA_HandleTypeDef hdma_spi1_tx;
 extern DMA_HandleTypeDef hdma_spi2_rx;
-extern TIM_HandleTypeDef htim2;
-extern DMA_HandleTypeDef hdma_usart2_rx;
-extern DMA_HandleTypeDef hdma_usart2_tx;
-extern UART_HandleTypeDef huart2;
-extern WWDG_HandleTypeDef hwwdg;
+extern DMA_HandleTypeDef hdma_spi2_tx;
+extern SPI_HandleTypeDef hspi1;
+extern SPI_HandleTypeDef hspi2;
 /* USER CODE BEGIN EV */
-extern DMA_HandleTypeDef hdma_spi1_rx;
-extern DMA_HandleTypeDef hdma_spi1_tx;
-extern DMA_HandleTypeDef hdma_spi2_rx;
 
 /* USER CODE END EV */
 
@@ -210,20 +204,6 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles Window watchdog interrupt.
-  */
-void WWDG_IRQHandler(void)
-{
-  /* USER CODE BEGIN WWDG_IRQn 0 */
-
-  /* USER CODE END WWDG_IRQn 0 */
-  HAL_WWDG_IRQHandler(&hwwdg);
-  /* USER CODE BEGIN WWDG_IRQn 1 */
-
-  /* USER CODE END WWDG_IRQn 1 */
-}
-
-/**
   * @brief This function handles EXTI line0 interrupt.
   */
 void EXTI0_IRQHandler(void)
@@ -243,6 +223,7 @@ void EXTI0_IRQHandler(void)
 void DMA1_Channel2_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel2_IRQn 0 */
+
   /* USER CODE END DMA1_Channel2_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi1_rx);
   /* USER CODE BEGIN DMA1_Channel2_IRQn 1 */
@@ -279,31 +260,17 @@ void DMA1_Channel4_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles DMA1 channel6 global interrupt.
+  * @brief This function handles DMA1 channel5 global interrupt.
   */
-void DMA1_Channel6_IRQHandler(void)
+void DMA1_Channel5_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel6_IRQn 0 */
+  /* USER CODE BEGIN DMA1_Channel5_IRQn 0 */
 
-  /* USER CODE END DMA1_Channel6_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_rx);
-  /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
+  /* USER CODE END DMA1_Channel5_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_spi2_tx);
+  /* USER CODE BEGIN DMA1_Channel5_IRQn 1 */
 
-  /* USER CODE END DMA1_Channel6_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 channel7 global interrupt.
-  */
-void DMA1_Channel7_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel7_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel7_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_tx);
-  /* USER CODE BEGIN DMA1_Channel7_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel7_IRQn 1 */
+  /* USER CODE END DMA1_Channel5_IRQn 1 */
 }
 
 /**
@@ -321,31 +288,31 @@ void EXTI9_5_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM2 global interrupt.
+  * @brief This function handles SPI1 global interrupt.
   */
-void TIM2_IRQHandler(void)
+void SPI1_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM2_IRQn 0 */
+  /* USER CODE BEGIN SPI1_IRQn 0 */
 
-  /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
+  /* USER CODE END SPI1_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi1);
+  /* USER CODE BEGIN SPI1_IRQn 1 */
 
-  /* USER CODE END TIM2_IRQn 1 */
+  /* USER CODE END SPI1_IRQn 1 */
 }
 
 /**
-  * @brief This function handles USART2 global interrupt.
+  * @brief This function handles SPI2 global interrupt.
   */
-void USART2_IRQHandler(void)
+void SPI2_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART2_IRQn 0 */
+  /* USER CODE BEGIN SPI2_IRQn 0 */
 
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
+  /* USER CODE END SPI2_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi2);
+  /* USER CODE BEGIN SPI2_IRQn 1 */
 
-  /* USER CODE END USART2_IRQn 1 */
+  /* USER CODE END SPI2_IRQn 1 */
 }
 
 /**

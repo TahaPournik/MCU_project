@@ -19,20 +19,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
-#include "iwdg.h"
 #include "spi.h"
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_gpio.h"
 #include "tim.h"
-#include "usart.h"
-#include "usb.h"
-#include "wwdg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "lcd.h"
 #include "sensing.h"
+#include "stm32f1xx_hal.h"
+#include "stdio.h"
+#include "lcd.h"
+#include "stm32f1xx_hal_spi.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +39,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 
 /* USER CODE END PD */
 
@@ -54,7 +50,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+  uint8_t tx_data[9] = {0x80, 0xc1, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00};
+  uint8_t rx_data[9];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,7 +73,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -98,33 +95,37 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART2_UART_Init();
-  // MX_IWDG_Init();
-  MX_USB_PCD_Init();
-  LCD_Init();
-  sensing_init();
-  // MX_WWDG_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   sensing_init();
-
+  LCD_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  char lcd_buffer[16];
+ 
 
   while (1)
   {
-    /* USER CODE END WHILE */
-    LCD_Clear();
-    LCD_Print("start");
-    max31865_read();
-    LCD_Clear();
-    LCD_Print("finish");
-    HAL_Delay(1000);
-   
-    /* USER CODE BEGIN 3 */
+     max31865_read();
+     HAL_Delay(400);
+     max31855_read();
+     HAL_Delay(400);
 
+     LCD_Clear();
+     sprintf(lcd_buffer, "amb: %.2f C",sensor_data.temp_max31865);
+     LCD_Print(lcd_buffer);
+     sprintf(lcd_buffer, "furn: %d C", (int)sensor_data.temp_max31855);
+     LCD_SetCursor(1, 0);
+     LCD_Print(lcd_buffer);
+     HAL_Delay(400);
+
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
@@ -137,19 +138,17 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -161,23 +160,23 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /* USER CODE BEGIN 4 */
-
+// void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
+// {
+//   if (hspi->Instance == SPI1)
+//   {
+//     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+//   }
+// }
 /* USER CODE END 4 */
 
 /**
@@ -187,7 +186,6 @@ void SystemClock_Config(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)

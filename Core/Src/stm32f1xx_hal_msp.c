@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -84,9 +84,9 @@ void HAL_MspInit(void)
   /* PendSV_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(PendSV_IRQn, 7, 0);
 
-  /** NOJTAG: JTAG-DP Disabled and SW-DP Enabled
+  /** DISABLE: JTAG-DP Disabled and SW-DP Disabled
   */
-  __HAL_AFIO_REMAP_SWJ_NOJTAG();
+  __HAL_AFIO_REMAP_SWJ_DISABLE();
 
   /* USER CODE BEGIN MspInit 1 */
 

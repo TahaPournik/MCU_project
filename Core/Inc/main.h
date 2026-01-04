@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -59,14 +59,6 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_POWER_Pin GPIO_PIN_13
 #define LED_POWER_GPIO_Port GPIOC
-#define LED_FAULT_Pin GPIO_PIN_0
-#define LED_FAULT_GPIO_Port GPIOA
-#define RS485_DE_Pin GPIO_PIN_1
-#define RS485_DE_GPIO_Port GPIOA
-#define RS485_TX_Pin GPIO_PIN_2
-#define RS485_TX_GPIO_Port GPIOA
-#define RS485_RX_Pin GPIO_PIN_3
-#define RS485_RX_GPIO_Port GPIOA
 #define MAX31865_CS_Pin GPIO_PIN_4
 #define MAX31865_CS_GPIO_Port GPIOA
 #define MAX31865_SCK_Pin GPIO_PIN_5
@@ -78,7 +70,7 @@ void Error_Handler(void);
 #define VC_MONITOR_Pin GPIO_PIN_0
 #define VC_MONITOR_GPIO_Port GPIOB
 #define VC_MONITOR_EXTI_IRQn EXTI0_IRQn
-#define FURNACE_RELAY_Pin GPIO_PIN_3
+#define FURNACE_RELAY_Pin GPIO_PIN_1
 #define FURNACE_RELAY_GPIO_Port GPIOB
 #define FAN_RELAY_Pin GPIO_PIN_2
 #define FAN_RELAY_GPIO_Port GPIOB
@@ -92,8 +84,6 @@ void Error_Handler(void);
 #define MAX31855_SCK_GPIO_Port GPIOB
 #define MAX31855_MISO_Pin GPIO_PIN_14
 #define MAX31855_MISO_GPIO_Port GPIOB
-#define LCD_D7_Pin GPIO_PIN_15
-#define LCD_D7_GPIO_Port GPIOB
 #define LED_COM_Pin GPIO_PIN_8
 #define LED_COM_GPIO_Port GPIOA
 #define MENU_BTN_Pin GPIO_PIN_9
@@ -102,16 +92,18 @@ void Error_Handler(void);
 #define ENTER_BTN_Pin GPIO_PIN_10
 #define ENTER_BTN_GPIO_Port GPIOA
 #define ENTER_BTN_EXTI_IRQn EXTI15_10_IRQn
-#define LCD_RS_Pin GPIO_PIN_5
+#define LCD_RS_Pin GPIO_PIN_4
 #define LCD_RS_GPIO_Port GPIOB
-#define LCD_E_Pin GPIO_PIN_6
-#define LCD_E_GPIO_Port GPIOB
-#define LCD_D4_Pin GPIO_PIN_7
+#define LCD_EN_Pin GPIO_PIN_5
+#define LCD_EN_GPIO_Port GPIOB
+#define LCD_D4_Pin GPIO_PIN_6
 #define LCD_D4_GPIO_Port GPIOB
-#define LCD_D5_Pin GPIO_PIN_8
+#define LCD_D5_Pin GPIO_PIN_7
 #define LCD_D5_GPIO_Port GPIOB
-#define LCD_D6_Pin GPIO_PIN_9
+#define LCD_D6_Pin GPIO_PIN_8
 #define LCD_D6_GPIO_Port GPIOB
+#define LCD_D7_Pin GPIO_PIN_9
+#define LCD_D7_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
