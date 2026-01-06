@@ -1,8 +1,7 @@
-/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main program body
+  * @brief          : Main program body for Heater Module Control
   ******************************************************************************
   * @attention
   *
@@ -15,54 +14,45 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
 #include "spi.h"
+#include "stm32f1xx_hal_gpio.h"
 #include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "sensing.h"
-#include "stm32f1xx_hal.h"
-#include "stdio.h"
 #include "lcd.h"
-#include "stm32f1xx_hal_spi.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
 /* USER CODE BEGIN PV */
-  uint8_t tx_data[9] = {0x80, 0xc1, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00};
-  uint8_t rx_data[9];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -71,57 +61,44 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration --------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
-  MX_TIM2_Init();
+  MX_TIM1_Init();
+
   /* USER CODE BEGIN 2 */
+  /* Initialize sensors and display */
   sensing_init();
   LCD_Init();
+  
+  /* Start sampling timer in interrupt mode */
+  HAL_TIM_Base_Start_IT(&htim1);
+  HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  char lcd_buffer[16];
- 
 
   while (1)
   {
-     max31865_read();
-     HAL_Delay(400);
-     max31855_read();
-     HAL_Delay(400);
-
-     LCD_Clear();
-     sprintf(lcd_buffer, "amb: %.2f C",sensor_data.temp_max31865);
-     LCD_Print(lcd_buffer);
-     sprintf(lcd_buffer, "furn: %d C", (int)sensor_data.temp_max31855);
-     LCD_SetCursor(1, 0);
-     LCD_Print(lcd_buffer);
-     HAL_Delay(400);
+    /* Update display every 1 second */
+    HAL_Delay(1000);
+  
+    LCD_Clear();
+    
+    LCD_Print(max31865_lcd_buffer);
+    LCD_SetCursor(1, 0);
+    LCD_Print(max31855_lcd_buffer);
 
     /* USER CODE END WHILE */
 
@@ -169,16 +146,6 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
-// void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
-// {
-//   if (hspi->Instance == SPI1)
-//   {
-//     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
-//   }
-// }
-/* USER CODE END 4 */
-
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
@@ -193,6 +160,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
+
 #ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
