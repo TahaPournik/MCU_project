@@ -1,7 +1,8 @@
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main program body for Heater Module Control
+  * @brief          : Main program body
   ******************************************************************************
   * @attention
   *
@@ -14,12 +15,11 @@
   *
   ******************************************************************************
   */
-
+/* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
 #include "spi.h"
-#include "stm32f1xx_hal_gpio.h"
 #include "tim.h"
 #include "gpio.h"
 
@@ -43,6 +43,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
 /* USER CODE BEGIN PV */
 /* USER CODE END PV */
 
@@ -61,13 +62,26 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* MCU Configuration --------------------------------------------------------*/
+
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
   /* Configure the system clock */
   SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -75,7 +89,6 @@ int main(void)
   MX_SPI1_Init();
   MX_SPI2_Init();
   MX_TIM1_Init();
-
   /* USER CODE BEGIN 2 */
   /* Initialize sensors and display */
   sensing_init();
@@ -146,6 +159,10 @@ void SystemClock_Config(void)
   }
 }
 
+/* USER CODE BEGIN 4 */
+
+/* USER CODE END 4 */
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
@@ -160,7 +177,6 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
 #ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number

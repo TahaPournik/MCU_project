@@ -54,12 +54,11 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, MAX31865_CS_Pin|LED_COM_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(MAX31865_CS_GPIO_Port, MAX31865_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, FURNACE_RELAY_Pin|FAN_RELAY_Pin|MAX31855_CS_Pin|LCD_RS_Pin
-                          |LCD_EN_Pin|LCD_D4_Pin|LCD_D5_Pin|LCD_D6_Pin
-                          |LCD_D7_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, MAX31855_CS_Pin|LCD_RS_Pin|LCD_EN_Pin|LCD_D4_Pin
+                          |LCD_D5_Pin|LCD_D6_Pin|LCD_D7_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LED_POWER_Pin */
   GPIO_InitStruct.Pin = LED_POWER_Pin;
@@ -68,51 +67,21 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_POWER_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : MAX31865_CS_Pin LED_COM_Pin */
-  GPIO_InitStruct.Pin = MAX31865_CS_Pin|LED_COM_Pin;
+  /*Configure GPIO pin : MAX31865_CS_Pin */
+  GPIO_InitStruct.Pin = MAX31865_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(MAX31865_CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : VC_MONITOR_Pin */
-  GPIO_InitStruct.Pin = VC_MONITOR_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(VC_MONITOR_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : FURNACE_RELAY_Pin FAN_RELAY_Pin MAX31855_CS_Pin LCD_RS_Pin
-                           LCD_EN_Pin LCD_D4_Pin LCD_D5_Pin LCD_D6_Pin
-                           LCD_D7_Pin */
-  GPIO_InitStruct.Pin = FURNACE_RELAY_Pin|FAN_RELAY_Pin|MAX31855_CS_Pin|LCD_RS_Pin
-                          |LCD_EN_Pin|LCD_D4_Pin|LCD_D5_Pin|LCD_D6_Pin
-                          |LCD_D7_Pin;
+  /*Configure GPIO pins : MAX31855_CS_Pin LCD_RS_Pin LCD_EN_Pin LCD_D4_Pin
+                           LCD_D5_Pin LCD_D6_Pin LCD_D7_Pin */
+  GPIO_InitStruct.Pin = MAX31855_CS_Pin|LCD_RS_Pin|LCD_EN_Pin|LCD_D4_Pin
+                          |LCD_D5_Pin|LCD_D6_Pin|LCD_D7_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : UP_BTN_Pin DOWN_BTN_Pin */
-  GPIO_InitStruct.Pin = UP_BTN_Pin|DOWN_BTN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : MENU_BTN_Pin ENTER_BTN_Pin */
-  GPIO_InitStruct.Pin = MENU_BTN_Pin|ENTER_BTN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 11, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 14, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 14, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 

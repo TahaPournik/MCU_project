@@ -1,104 +1,303 @@
-# Technical Specification: Industrial Heater Control Module (v2.0)
-**Revision:** 2.0  
-**Date:** 2026-01-01  
-**Platform:** STM32F103C8T6 (Arm® Cortex®-M3)
+# System Architecture
+
+**Project:** Temperature Monitoring System  
+**Author:** Taha Pournik  
+**Version:** 1.0
 
 ---
 
-## 1. Functional Overview
-The Smart Heater Module is a high-reliability industrial controller designed for precise thermal management and safety-critical combustion control. The system architecture leverages DMA (Direct Memory Access) and Interrupt-driven logic to ensure safe, real-time operation without CPU blocking.
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Block Diagram](#block-diagram)
+3. [Hardware Architecture](#hardware-architecture)
+4. [Software Architecture](#software-architecture)
+5. [Data Flow](#data-flow)
+6. [Pin Configuration](#pin-configuration)
+7. [Circuit Diagram](#circuit-diagram)
+8. [References](#references)
 
 ---
 
-## 2. System Hardware Components
+## Overview
 
-### 2.1 Temperature Sensing ICs
-*   **MAX31865 (RTD-to-Digital Converter):**
-    *   Interfaces with a high-precision PT100 probe.
-    *   Configured in **DMA Mode** for continuous resistance-to-temperature conversion.
-*   **MAX31855 (Thermocouple-to-Digital):**
-    *   Interfaces with a K-Type Thermocouple for furnace monitoring.
-    *   Configured in **DMA Mode** (Read-Only) with built-in cold-junction compensation and fault detection (Open/Short circuit).
+The system implements a dual-sensor temperature monitoring solution using the STM32F103C8 microcontroller. It integrates two independent temperature sensing channels with different sensor technologies, processes the data using DMA-accelerated SPI communication, and displays real-time results on an LCD.
 
-### 2.2 Communication & Safety
-*   **RS485 Transceiver:**
-    *   Implements **Modbus RTU** protocol.
-    *   Utilizes **DMA with Idle Line Detection** to process packets only upon frame completion.
-*   **V/A Monitor Relay:**
-    *   Hardware feedback loop for heater fan status.
-    *   Connected via **EXTI (External Interrupt)** for sub-microsecond fail-safe response.
+### System Capabilities
+
+- **Ambient Temperature Range:** -50°C to +200°C (PT100 RTD)
+- **Furnace Temperature Range:** 0°C to +1024°C (K-type thermocouple)
+- **Sampling Rate:** 2 Hz (500ms period)
+- **Display Update Rate:** 1 Hz (1 second refresh)
+- **Temperature Resolution:** 0.01°C (ambient), 0.25°C (furnace)
 
 ---
 
-## 3. Peripheral Map & Wire Interconnects
+## Block Diagram
 
-| Pin | Identifier | Primary Function | Drive Mode | Purpose |
-|-----|------------|------------------|------------|---------|
-| **PA1** | RS485_DE | GPIO_Output | High-Speed PP | Direction Control (DE/RE) |
-| **PA2** | RS485_TX | USART2_TX | AF_PP | Modbus Data Transmit |
-| **PA3** | RS485_RX | USART2_RX | Input (Pull-up) | Modbus Data Receive |
-| **PA4** | PT100_CS | GPIO_Output | Push-Pull | MAX31865 Slave Select |
-| **PA5** | SCK1 | SPI1_SCK | AF_PP | PT100/Sensor Bus Clock |
-| **PA6** | MISO1 | SPI1_MISO | Input | PT100 Data Input |
-| **PA7** | MOSI1 | SPI1_MOSI | AF_PP | PT100 Data Output |
-| **PA9** | MENU_BTN | EXTI9 | IT Falling | System Menu Access |
-| **PA10**| ENTER_BTN | EXTI10 | IT Falling | Command Confirmation |
-| **PB0** | VC_MONITOR| EXTI0 | **IT Falling** | **Fan Fault Monitor (Safety)** |
-| **PB1** | GAS_RELAY | GPIO_Output | Push-Pull | Fuel Valve Control |
-| **PB2** | FAN_RELAY | GPIO_Output | Push-Pull | Air Circulator Control |
-| **PB12**| TC_CS | GPIO_Output | Push-Pull | MAX31855 Slave Select |
-| **PB13**| SCK2 | SPI2_SCK | AF_PP | Thermocouple Bus Clock |
-| **PB14**| MISO2 | SPI2_MISO | Input | Thermocouple Data Input |
-
----
-
-## 4. Software Logic & Interrupt Architecture
-
-### 4.1 Asynchronous Sensor Acquisition (DMA Chaining)
-To ensure the SPI bus is utilized efficiently without CPU overhead, the sensors operate in a "Ping-Pong" circular sequence.
-1.  **Trigger:** Timer or Main Loop starts the first DMA transfer.
-2.  **Handoff:** Upon `DMA_RX_Complete`, the Interrupt Handler processes the data and immediately initiates the transfer for the next sensor.
-
-`[INSERT CODE SAMPLE: DMA RX CALLBACK CHAINING]`
-
-### 4.2 Safety-Critical Fan Monitoring (EXTI)
-The `VC_MONITOR` is mapped to the highest priority interrupt (NVIC Priority 0).
-*   **Logic:** Any hardware-detected failure in the fan voltage or current triggers a hard-reset of the Gas Valve and Ignition relays within nanoseconds.
-
-`[INSERT CODE SAMPLE: EXTI SAFETY CALLBACK]`
-
-### 4.3 Deterministic Modbus RTU (DMA + Idle IT)
-The system uses Hardware Idle Line detection to minimize interrupt frequency.
-*   The DMA fills a global buffer in the background.
-*   The CPU is only interrupted when the line is silent for 3.5 character times (end of Modbus frame).
-
-`[INSERT CODE SAMPLE: UART IDLE LINE DMA SETUP]`
-
-### 4.4 Non-Blocking User Interface
-*   **LCD (16x2):** Operated via a **Polling State Machine**. This method eliminates the need for `HAL_Delay()`, allowing the MCU to process safety logic even during display refreshes.
-*   **Keypad:** Event-driven via EXTI. Non-menu buttons (Up/Down) are only polled when the menu state is active to conserve resources.
-
-`[INSERT CODE SAMPLE: NON-BLOCKING LCD STATE MACHINE]`
+```
+┌────────────────────────────────────────────────────────────────┐
+│                     STM32F103C8 Microcontroller                │
+│                                                                │
+│  ┌──────────┐    ┌──────┐    ┌──────┐    ┌─────────────────┐   │
+│  │  TIM1    │───►│ CPU  │◄──►│ DMA1 │◄──►│  SPI1 / SPI2    │   │
+│  │ (500ms)  │    │      │    │      │    │                 │   │
+│  └──────────┘    └──────┘    └──────┘    └─────────────────┘   │
+│                      │                             │           │
+│                      ▼                             │           │
+│                  ┌────────┐                        │           │
+│                  │  GPIO  │                        │           │
+│                  └────────┘                        │           │
+└──────────────────────┬─────────────────────────────┼───────────┘
+                       │                             │
+          ┌────────────┴──────────┐         ┌────────┴────────┐
+          │                       │         │                 │
+          ▼                       ▼         ▼                 ▼
+    ┌──────────┐           ┌──────────┐  ┌─────────┐   ┌─────────┐
+    │   LCD    │           │   LED    │  │MAX31865 │   │MAX31855 │
+    │  16x2    │           │  Status  │  │ (PT100) │   │ (K-Type)│
+    └──────────┘           └──────────┘  └─────────┘   └─────────┘
+```
 
 ---
 
-## 5. NVIC Priority Matrix
+## Hardware Architecture
 
-| IRQ Source | Preemption Priority | Sub-priority | Logic Role |
-|------------|---------------------|--------------|------------|
-| **EXTI0 (VC Monitor)** | **0** | **0** | **Emergency Shutdown (Fan Fail)** |
-| DMA Channels (SPI/UART) | 1 | 0 | High-Speed Data Transfer |
-| Timer Interrupt (Relay IT) | 2 | 0 | Deterministic Relay Control |
-| UART Global IT | 3 | 0 | Modbus Packet Processing |
-| EXTI 9-10 (Buttons) | 4 | 0 | User Interface Interaction |
+### Microcontroller: STM32F103C8T6
+
+- **Core:** ARM Cortex-M3 @ 72 MHz
+- **Flash:** 64 KB
+- **RAM:** 20 KB
+- **Peripherals Used:**
+  - 2× SPI (SPI1, SPI2)
+  - DMA1 (4 channels)
+  - TIM1 (Timer)
+  - GPIO ports (A, B, C)
+
+### Peripheral Mapping
+
+| Peripheral | Function           | Connected To        |
+|------------|--------------------|---------------------|
+| SPI1       | PT100 Communication| MAX31865            |
+| SPI2       | Thermocouple Comm. | MAX31855            |
+| TIM1       | Sampling Timer     | Internal (500ms)    |
+| GPIO_A     | SPI1   | MAX31865     |
+| GPIO_B     | SPI2 + LCD Data and control              | MAX31855 + LCD           |
+| GPIO_C     | LED  | Status LED    |
 
 ---
 
-## 6. Engineering Requirements & Protection
-1.  **Isolation:** Suggest Opto-isolation for all Relay control pins and Modbus RS485 lines.
-2.  **Filtering:** 100nF decoupling capacitors must be placed < 5mm from MAX ICs.
-3.  **Fail-Safe:** Internal Relay flags must be cleared on any System Reset or Watchdog event.
+## Software Architecture
+
+### Layered Architecture
+
+```
+┌─────────────────────────────────────────┐
+│        Application Layer                │
+│         (main.c)                        │
+│  - Display updates                      │
+│  - System coordination                  │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│       Module Layer                      │
+│  ┌──────────────┐  ┌─────────────────┐  │
+│  │ sensing.c    │  │    lcd.c        │  │
+│  │ - MAX31865   │  │ - 4-bit driver  │  │
+│  │ - MAX31855   │  │ - Text output   │  │
+│  │ - Processing │  │                 │  │
+│  └──────────────┘  └─────────────────┘  │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│       Hardware Abstraction Layer        │
+│  ┌─────┐  ┌─────┐  ┌──────┐  ┌──────┐   │
+│  │ SPI │  │ DMA │  │ TIM  │  │ GPIO │   │
+│  └─────┘  └─────┘  └──────┘  └──────┘   │
+└─────────────────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│       STM32 HAL Library                 │
+└─────────────────────────────────────────┘
+```
+
+### Software Modules
+
+1. **Main Application** (`main.c`)
+   - System initialization
+   - Peripheral configuration
+   - Main loop with display updates
+
+2. **Sensing Module** (`sensing.c/h`)
+   - Sensor initialization
+   - DMA-based data acquisition
+   - Data processing and calibration
+   - Fault detection
+
+3. **LCD Module** (`lcd.c/h`)
+   - 4-bit parallel interface
+   - Character and string output
+   - Cursor control
+
+4. **Peripheral Drivers** (`spi.c`, `dma.c`, `tim.c`, `gpio.c`)
+   - Low-level peripheral configuration
+   - Generated by STM32CubeMX
 
 ---
-**Document Status:** Final Technical Proposal  
-**Approved by:** Engineering Lead  
+
+## Data Flow
+
+### Sensor Reading Sequence
+
+```
+Timer Interrupt (500ms)
+        │
+        ▼
+┌───────────────────┐
+│  Sampling Step    │
+│  Counter          │
+└───────┬───────────┘
+        │
+        │
+    ┌───┴────────────────────┐
+    │                        │
+    ▼                        ▼
+MAX31855 Read           MAX31865 Read
+    │                        │
+    ▼                        ▼
+DMA Transfer            DMA Transfer
+    │                        │
+    ▼                        ▼
+Buffer Storage          Buffer Storage
+    │                        │
+    └────────┬───────────────┘
+             │
+    (After 5 samples each)
+             │
+             ▼
+    ┌─────────────────┐
+    │ Data Processing │
+    │ - Averaging     │
+    │ - Conversion    │
+    │ - Calibration   │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │ LCD Update      │
+    │ (Every 1 sec)   │
+    └─────────────────┘
+```
+
+### DMA Transfer Flow
+
+For detailed DMA operation, see [DMA Peripheral Documentation](DMA_peripheral.md).
+
+```
+CPU → DMA Setup → SPI Request → Peripheral Transfer
+                      ↓
+                 DMA Interrupt
+                      ↓
+                Data in Buffer → Process
+```
+
+---
+
+## Pin Configuration
+
+### SPI1 - MAX31865 (PT100)
+
+| Pin  | Function | STM32 Pin | MAX31865 Pin |
+|------|----------|-----------|--------------|
+| SCK  | Clock    | PA5       | SCLK         |
+| MISO | Data In  | PA6       | SDO (MISO)   |
+| MOSI | Data Out | PA7       | SDI (MOSI)   |
+| CS   | Select   | PA4       | CS           |
+
+**Configuration:**
+- Mode: Full-duplex master
+- Clock: CPOL=0, CPHA=1
+- Baud Rate: ~281 kHz (APB2/128)
+- Data Size: 8-bit
+
+### SPI2 - MAX31855 (K-Type)
+
+| Pin  | Function | STM32 Pin | MAX31855 Pin |
+|------|----------|-----------|--------------|
+| SCK  | Clock    | PB13      | SCK          |
+| MISO | Data In  | PB14      | SO           |
+| MOSI | Data Out | PB15      | (Unused)     |
+| CS   | Select   | PB12      | CS           |
+
+**Configuration:**
+- Mode: Full-duplex master (dummy TX for clock)
+- Clock: CPOL=0, CPHA=0
+- Baud Rate: ~140 kHz (APB1/256)
+- Data Size: 8-bit
+
+### LCD Interface (4-bit Mode)
+
+| Pin | Function | STM32 Pin |
+|-----|----------|-----------|
+| RS  | Register Select | PB4 |
+| E   | Enable   | PB5      |
+| D4  | Data 4   | PB6       |
+| D5  | Data 5   | PB7       |
+| D6  | Data 6   | PB8       |
+| D7  | Data 7   | PB9       |
+
+### Status LED
+
+| Pin | Function | STM32 Pin |
+|-----|----------|-----------|
+| LED | Power/Status | PC13 |
+
+---
+
+## Circuit Diagram
+
+The complete circuit schematic is available as an SVG export from the Proteus simulation.
+
+![System Circuit Diagram](../simulation/heater_module.svg)
+
+### Proteus Simulation File
+
+The full interactive simulation is available here:
+- **File:** [heater_module.pdsprj](../simulation/heater_module.pdsprj)
+- Open with Proteus Design Suite 8.x or later
+
+### Key Circuit Components
+
+1. **Power Supply:** 3.3V regulated, decoupled with 100nF ceramics
+2. **Crystal Oscillator:** 8 MHz external HSE
+3. **LED:** Current limiting resistor (110Ω)
+
+---
+
+## References
+
+### Microcontroller Documentation
+
+- [STM32F103C8 Datasheet](STM32f103c8.pdf) - Complete MCU specifications
+- [STM32F1 Reference Manual](Reference_Manual.pdf) - Peripheral details
+- [STM32F1 Programming Manual](Programming_Manual.pdf) - Cortex-M3 programming
+- [STM32F1 HAL/LL Drivers](STM32f1_HAL_LL_Drivers.pdf) - Driver documentation
+
+### Sensor Documentation
+
+- [MAX31865 Datasheet](max31865.pdf) - RTD-to-Digital Converter
+- [MAX31855 Datasheet](max31855.pdf) - Thermocouple-to-Digital Converter
+
+### Related Documentation
+
+- [DMA Peripheral Configuration](DMA_peripheral.md)
+- [SPI Peripheral Configuration](SPI_peripheral.md)
+- [Timer Configuration](TIM_peripheral.md)
+- [LCD Driver Implementation](lcd_module.md)
+- [Sensing Module Details](sensing_module.md)
+
+---
+
+**Document Version:** 1.0  
+**Last Updated:** January 2026  
+**Author:** Taha Pournik

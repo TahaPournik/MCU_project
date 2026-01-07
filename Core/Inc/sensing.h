@@ -18,8 +18,31 @@ extern "C" {
 #endif
 
 /* Exported defines ----------------------------------------------------------*/
+
+/* Data Buffer Sizes */
 #define MAX31865_DATA_SIZE 9
 #define MAX31855_DATA_SIZE 4
+
+/* MAX31865 Configuration Options */
+#define FILTER_50HZ      0x00
+#define FILTER_60HZ      0x01
+#define FAULT_CLEAR      0x02
+#define PT100_TWO_WIRE   0x10
+#define PT100_FOUR_WIRE  0x10
+#define PT100_THREE_WIRE 0x00
+
+/* MAX31865 Fault Error Bits */
+#define MAX31865_OU_VOLTAGE 0x04 << 8   /**< Over/Under voltage fault */
+#define MAX31865_SENSOR_OC  0x08 << 8   /**< Sensor Open Circuit */
+#define MAX31865_REF_OC     0x10 << 8   /**< Reference Open Circuit */
+#define MAX31865_REF_SC     0x20 << 8   /**< Reference Short Circuit */
+#define MAX31865_LOW_THD    0x40 << 8   /**< Low Threshold fault */
+#define MAX31865_HIGH_THD   0x80 << 8   /**< High Threshold fault */
+
+/* MAX31855 Fault Error Bits */
+#define MAX31855_SENSOR_OC      0x01 << 8  /**< Sensor Open Circuit */
+#define MAX31855_SENSOR_SC_GND  0x02 << 8  /**< Sensor Short Circuit to GND */
+#define MAX31855_SENSOR_SC_VCC  0x04 << 8  /**< Sensor Short Circuit to VCC */
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -56,6 +79,7 @@ extern uint8_t max31855_busy_flag;
 
 extern char max31865_lcd_buffer[16];
 extern char max31855_lcd_buffer[16];
+
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
@@ -100,28 +124,9 @@ void max31865_ErrorCallback(void);
  */
 void max31855_ErrorCallback(void);
 
-/*private define*/
-//max31865_configs
-#define FILTER_50HZ 0X00
-#define FILTER_60HZ 0X01
-#define FAULT_CLEAR 0X02
-#define PT100_TWO_WIRE 0X10
-#define PT100_FOUR_WIRE 0X10
-#define PT100_THREE_WIRE 0X00
-//MAX31865_FAULTS
-#define MAX31865_OU_VOLTAGE 0X04 << 8
-#define MAX31865_SENOR_OC 0X08 << 8
-#define MAX31865_REF_OC 0X10 << 8
-#define MAX31865_REF_SC 0X20 << 8
-#define MAX31865_LOW_THD 0X40 << 8
-#define MAX31865_HIGH_THD 0X80 << 8
-//MAX31855_FAULTS
-#define MAX31855_SENSOR_OC 0X01 << 8
-#define MAX31855_SENSOR_SC_GND 0X02 << 8
-#define MAX31855_SENSOR_SC_VCC 0X04 << 8
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __SENSING_H */
+
