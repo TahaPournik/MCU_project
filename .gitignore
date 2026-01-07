@@ -1,9 +1,5 @@
 # Build Directories
-/build/
-/build_test/
-/Debug/
-/Release/
-/bin/
+
 
 # Toolchain/IDE specific
 .vscode/
@@ -39,5 +35,3 @@ Thumbs.db
 *.ioc.bak
 mx.scratch
 
-# simulation
-simulation/
